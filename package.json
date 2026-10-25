@@ -10,7 +10,7 @@
   "dependencies": {
     "stremio-addon-sdk": "^1.6.10",
     "express": "^4.21.2",
-    "cheerio-without-node-native": "^0.20.2"
+    "cheerio-without-node-native": "1.0.0-rc.2"
   },
   "engines": {
     "node": "20.x"
