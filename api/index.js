@@ -2,14 +2,15 @@
 const express = require("express");
 const { addonBuilder, getRouter } = require("stremio-addon-sdk");
 const provider = require("../provider");
+const playimdb = require("../playimdb");
 
 const TMDB_API_KEY = process.env.TMDB_API_KEY;
 
 const builder = new addonBuilder({
   id: "com.nick1234.4khdhub",
-  version: "1.0.0",
+  version: "1.1.0",
   name: "4KHDHub Nick",
-  description: "Movie and series streams",
+  description: "Movie and series streams from multiple providers",
   resources: ["stream"],
   types: ["movie", "series"],
   catalogs: [],
@@ -32,8 +33,9 @@ async function imdbToTmdb(imdbId, type) {
   }
 
   const data = await response.json();
-  const results =
-    type === "series" ? data.tv_results : data.movie_results;
+  const results = type === "series"
+    ? data.tv_results
+    : data.movie_results;
 
   return results && results.length ? results[0].id : null;
 }
@@ -56,14 +58,24 @@ builder.defineStreamHandler(async ({ type, id }) => {
     const season = parts[1] ? Number(parts[1]) : undefined;
     const episode = parts[2] ? Number(parts[2]) : undefined;
 
-    const streams = await provider.getStreams(
-      String(tmdbId),
-      type,
-      season,
-      episode
-    );
+    const results = await Promise.allSettled([
+      provider.getStreams(String(tmdbId), type, season, episode),
+      playimdb.getStreams(String(tmdbId), type, season, episode)
+    ]);
 
-    return { streams: Array.isArray(streams) ? streams : [] };
+    const streams = results.flatMap((result, index) => {
+      if (result.status !== "fulfilled" || !Array.isArray(result.value)) {
+        console.error(
+          `Provider ${index + 1} failed:`,
+          result.status === "rejected" ? result.reason : "Invalid response"
+        );
+        return [];
+      }
+
+      return result.value;
+    });
+
+    return { streams };
   } catch (error) {
     console.error("Stream handler error:", error.message);
     return { streams: [] };
