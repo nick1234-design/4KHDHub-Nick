@@ -12,6 +12,7 @@ const builder = new addonBuilder({
   description: "Movie and series streams",
   resources: ["stream"],
   types: ["movie", "series"],
+  catalogs: [],
   idPrefixes: ["tt"]
 });
 
