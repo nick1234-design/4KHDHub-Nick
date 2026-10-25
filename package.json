@@ -13,6 +13,5 @@
     "cheerio-without-node-native": "1.0.0-rc.2"
   },
   "engines": {
-    "node": "20.x"
-  }
+  "node": "24.x"
 }
