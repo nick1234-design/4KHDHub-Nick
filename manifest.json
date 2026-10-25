@@ -1,0 +1,10 @@
+
+{
+  "id": "com.nick1234.4khdhub",
+  "version": "1.0.0",
+  "name": "4KHDHub Nick",
+  "description": "Movie and series streaming add-on",
+  "resources": ["stream"],
+  "types": ["movie", "series"],
+  "idPrefixes": ["tt"]
+}
