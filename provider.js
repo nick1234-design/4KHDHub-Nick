@@ -1,3 +1,4 @@
+
 "use strict";
 var __defProp = Object.defineProperty;
 var __defProps = Object.defineProperties;
@@ -43,6 +44,7 @@ var TMDB_API_KEY = process.env.TMDB_API_KEY;
 var USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36";
 var DOMAINS_URL = "https://raw.githubusercontent.com/phisher98/TVVVV/refs/heads/main/domains.json";
 var domainCache = { url: BASE_URL, ts: 0 };
+
 function fetchLatestDomain() {
   return __async(this, null, function* () {
     const now = Date.now();
@@ -60,6 +62,7 @@ function fetchLatestDomain() {
     return domainCache.url;
   });
 }
+
 function fetchText(_0) {
   return __async(this, arguments, function* (url, options = {}) {
     const retries = options.retries !== void 0 ? options.retries : 2;
@@ -82,6 +85,7 @@ function fetchText(_0) {
     return null;
   });
 }
+
 function getTmdbDetails(tmdbId, type) {
   return __async(this, null, function* () {
     const isSeries = type === "series" || type === "tv";
@@ -108,6 +112,7 @@ function getTmdbDetails(tmdbId, type) {
     }
   });
 }
+
 function atob(input) {
   const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/=";
   let str = String(input).replace(/=+$/, "");
@@ -120,11 +125,13 @@ function atob(input) {
   }
   return output;
 }
+
 function rot13Cipher(str) {
   return str.replace(/[a-zA-Z]/g, function(c) {
     return String.fromCharCode((c <= "Z" ? 90 : 122) >= (c = c.charCodeAt(0) + 13) ? c : c - 26);
   });
 }
+
 function levenshteinDistance(s, t) {
   if (s === t)
     return 0;
@@ -150,6 +157,7 @@ function levenshteinDistance(s, t) {
   }
   return d[n][m];
 }
+
 function parseBytes(val) {
   if (typeof val === "number")
     return val;
@@ -171,6 +179,7 @@ function parseBytes(val) {
     multiplier = 1024 * 1024 * 1024 * 1024;
   return num * multiplier;
 }
+
 function formatBytes(val) {
   if (val === 0)
     return "0 B";
@@ -181,7 +190,9 @@ function formatBytes(val) {
     i = 0;
   return parseFloat((val / Math.pow(k, i)).toFixed(2)) + " " + sizes[i];
 }
+
 var cheerio = require("cheerio-without-node-native");
+
 function fetchPageUrl(name, year, isSeries) {
   return __async(this, null, function* () {
     const domain = yield fetchLatestDomain();
@@ -229,7 +240,9 @@ function fetchPageUrl(name, year, isSeries) {
     return matchingCards.length > 0 ? matchingCards[0] : null;
   });
 }
+
 var cheerio2 = require("cheerio-without-node-native");
+
 function resolveRedirectUrl(redirectUrl) {
   return __async(this, null, function* () {
     if (redirectUrl.includes("hubcloud.") || redirectUrl.includes("hubdrive.")) {
@@ -256,6 +269,7 @@ function resolveRedirectUrl(redirectUrl) {
     return redirectUrl;
   });
 }
+
 function extractSourceResults($, el) {
   return __async(this, null, function* () {
     const localHtml = $(el).html();
@@ -312,6 +326,7 @@ function extractSourceResults($, el) {
     return null;
   });
 }
+
 function extractHubCloud(hubCloudUrl, baseMeta) {
   return __async(this, null, function* () {
     if (!hubCloudUrl)
@@ -334,40 +349,62 @@ function extractHubCloud(hubCloudUrl, baseMeta) {
       bytes: parseBytes(sizeText) || baseMeta.bytes,
       title: titleText || baseMeta.title
     });
+
+    // Updated detector: PixelDrain and FSL are checked before other link types.
     $("a").each((_, el) => {
       const text = $(el).text().trim();
       const href = $(el).attr("href");
-      if (!href)
-        return;
-      if (text.includes("10Gbps") || text.includes("PixelServer") || href.includes("hubcloud.cx")) {
+
+      if (!href) return;
+
+      const label = text.toLowerCase();
+      const link = href.toLowerCase();
+
+      const pixelMatch = href.match(
+        /pixeldrain\.(?:com|net)\/(?:u|api\/file)\/([a-z0-9_-]+)/i
+      );
+
+      if (pixelMatch) {
         results.push({
-          source: "HubCloud 10Gbps",
-          url: href,
+          source: "PixelDrain",
+          url: `https://pixeldrain.com/api/file/${pixelMatch[1]}`,
           meta: currentMeta
         });
-      } else if (text.includes("Download File") || href.includes("r2.dev")) {
-        results.push({
-          source: "Direct R2",
-          url: href,
-          meta: currentMeta
-        });
-      } else if (text.includes("ZipDisk") || href.includes("workers.dev")) {
-        results.push({
-          source: "ZipDisk Server",
-          url: href,
-          meta: currentMeta
-        });
-      } else if (text.includes("FSL")) {
+      } else if (label.includes("fsl") || link.includes("fsl")) {
         results.push({
           source: "FSL",
           url: href,
           meta: currentMeta
         });
+      } else if (
+        label.includes("10gbps") ||
+        label.includes("pixelserver") ||
+        link.includes("hubcloud.cx")
+      ) {
+        results.push({
+          source: "HubCloud 10Gbps",
+          url: href,
+          meta: currentMeta
+        });
+      } else if (label.includes("download file") || link.includes("r2.dev")) {
+        results.push({
+          source: "Direct R2",
+          url: href,
+          meta: currentMeta
+        });
+      } else if (label.includes("zipdisk") || link.includes("workers.dev")) {
+        results.push({
+          source: "ZipDisk Server",
+          url: href,
+          meta: currentMeta
+        });
       }
     });
+
     return results;
   });
 }
+
 function extractHblinks(hblinksUrl, baseMeta, depth = 0) {
   return __async(this, null, function* () {
     if (!hblinksUrl || depth > 2)
@@ -418,7 +455,9 @@ function extractHblinks(hblinksUrl, baseMeta, depth = 0) {
     }
   });
 }
+
 var cheerio3 = require("cheerio-without-node-native");
+
 function getStreams(tmdbId, type, season, episode) {
   return __async(this, null, function* () {
     const tmdbDetails = yield getTmdbDetails(tmdbId, type);
@@ -487,4 +526,5 @@ ${formatBytes(link.meta.bytes || 0)}`,
     return results.reduce((acc, val) => acc.concat(val), []);
   });
 }
+
 module.exports = { getStreams };
