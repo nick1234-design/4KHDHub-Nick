@@ -14,6 +14,7 @@ const builder = new addonBuilder({
   description: "Movie and series streams from multiple providers",
   resources: ["stream"],
   types: ["movie", "series"],
+  catalogs: [],
   idPrefixes: ["tt"]
 });
 
