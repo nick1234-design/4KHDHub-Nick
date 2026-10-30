@@ -241,7 +241,10 @@ function fetchPageUrl(name, year, isSeries) {
   });
 }
 
-var cheerio2 = require("cheerio-without-node-native");
+var cheerio2 = require(
+  "cheerio-without-node-native");
+
+var externalExtractor = require("./4khdhub-extractor.js");
 
 function resolveRedirectUrl(redirectUrl) {
   return __async(this, null, function* () {
