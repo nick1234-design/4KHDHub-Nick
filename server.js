@@ -212,10 +212,22 @@ builder.defineStreamHandler(async ({ type, id, config = {} }) => {
         console.error(`Provider ${index + 1} failed:`, result.status === "rejected" ? result.reason : "Invalid response");
         return [];
       }
+      // Normalize subtitle metadata for Nuvio's stream schema.
+      // Preserve existing fields and subtitle URLs; add required lang from common aliases.
+      const normalizedStreams = result.value.map(stream => {
+        if (!stream || !Array.isArray(stream.subtitles)) return stream;
+        const subtitles = stream.subtitles
+          .filter(subtitle => subtitle && typeof subtitle === "object")
+          .map(subtitle => {
+            const lang = String(subtitle.lang || subtitle.language || subtitle.code || subtitle.id || "und").trim();
+            return { ...subtitle, lang: lang || "und" };
+          });
+        return { ...stream, subtitles };
+      });
       if (index === 0) {
         // Give ShowBox streams an explicit source name and readable details.
         // Stremio displays a generic "Stream" heading when name is missing.
-        return result.value.map(stream => {
+        return normalizedStreams.map(stream => {
           const sourceTitle = String(stream.title || "ShowBox").trim();
           const quality = String(stream.quality || "").trim();
           const size = String(stream.size || "").trim();
@@ -226,7 +238,7 @@ builder.defineStreamHandler(async ({ type, id, config = {} }) => {
           return { ...stream, name: server ? "ShowBox - " + server : "ShowBox", title: titleParts.join("\n") };
         });
       }
-      return result.value;
+      return normalizedStreams;
     });
 
     return { streams };  } catch (error) {
