@@ -1,21 +1,44 @@
-
 const { addonBuilder, getRouter } = require("stremio-addon-sdk");
 const express = require("express");
-const provider = require("./provider");
+
 const playimdb = require("./playimdb");
-const fourKHDHub = require("./4khdhub-extractor");
+
+// Independent provider modules copied from the working NuvioStreams provider
+// implementations. PlayIMDb intentionally remains the original 4KHDHub-Nick file.
+const showbox = require("./providers/Showbox");
+const fourKHDHub = require("./providers/4khdhub");
+const hdhub4u = require("./providers/hdhub4u");
+const cinejoy = require("./providers/cinejoy");
+const vaplayer = require("./providers/vaplayer");
 
 const TMDB_API_KEY = process.env.TMDB_API_KEY;
 
+const addonConfig = [
+  { key: "enableShowbox", type: "checkbox", title: "Enable ShowBox", default: true },
+  { key: "enable4KHDHub", type: "checkbox", title: "Enable 4KHDHub", default: true },
+  { key: "enableHDHub4u", type: "checkbox", title: "Enable HDHub4u", default: true },
+  { key: "enablePlayIMDb", type: "checkbox", title: "Enable PlayIMDb", default: true },
+  { key: "enableCinejoy", type: "checkbox", title: "Enable Cinejoy", default: true },
+  { key: "enableVAplayer", type: "checkbox", title: "Enable VAplayer", default: true },
+  { key: "showboxCookies", type: "text", title: "ShowBox cookies (one per line)", default: "" },
+  { key: "showboxRegion", type: "text", title: "ShowBox region (for example USA7)", default: "USA7" }
+];
+
 const builder = new addonBuilder({
   id: "com.nick1234.4khdhub",
-  version: "1.2.0",
+  version: "2.0.0",
   name: "4KHDHub Nick",
-  description: "Movie and series streams from multiple providers",
+  description: "Independent movie and series providers",
   resources: ["stream"],
   types: ["movie", "series"],
   catalogs: [],
-  idPrefixes: ["tt"]
+  idPrefixes: ["tt"],
+  config: addonConfig,
+  behaviorHints: {
+    configurable: true,
+    adult: false,
+    p2pNotSupported: true
+  }
 });
 
 async function imdbToTmdb(imdbId, type) {
@@ -32,137 +55,87 @@ async function imdbToTmdb(imdbId, type) {
   }
 
   const data = await response.json();
-  const results = type === "series"
-    ? data.tv_results
-    : data.movie_results;
-
+  const results = type === "series" ? data.tv_results : data.movie_results;
   return results && results.length ? results[0].id : null;
 }
 
-async function getTmdbTitle(tmdbId, type) {
+async function getTmdbMetadata(tmdbId, type) {
   const endpoint = type === "series" ? "tv" : "movie";
   const response = await fetch(
     `https://api.themoviedb.org/3/${endpoint}/${tmdbId}?api_key=${TMDB_API_KEY}`
   );
 
   if (!response.ok) {
-    throw new Error(`TMDB title lookup failed: ${response.status}`);
+    throw new Error(`TMDB metadata lookup failed: ${response.status}`);
   }
 
   const data = await response.json();
-  return type === "series" ? data.name : data.title;
+  const date = type === "series" ? data.first_air_date : data.release_date;
+  return {
+    title: type === "series" ? data.name : data.title,
+    year: date ? Number(String(date).slice(0, 4)) : null
+  };
 }
 
-function normalizeTitle(value) {
-  return String(value || "")
-    .toLowerCase()
-    .replace(/[^a-z0-9\s]/g, " ")
-    .replace(/\s+/g, " ")
-    .trim();
+function isEnabled(config, key) {
+  // Missing config means the provider is enabled by default for first-time installs.
+  return config[key] !== false && config[key] !== "false";
 }
 
-function titleScore(candidate, query) {
-  const a = normalizeTitle(candidate);
-  const b = normalizeTitle(query);
-
-  if (!a || !b) return 0;
-  if (a === b) return 100;
-
-  const queryWords = b.split(" ");
-  const candidateWords = a.split(" ");
-  const matched = queryWords.filter(word =>
-    candidateWords.some(other => other === word)
-  ).length;
-
-  let score = (matched / queryWords.length) * 70;
-
-  if (a.includes(b) || b.includes(a)) {
-    score += 20;
-  }
-
-  score -= Math.min(10, Math.abs(a.length - b.length) / 5);
-  return score;
-}
-
-async function get4KHDHubStreams(title, type, season, episode) {
-  try {
-    const results = await fourKHDHub.searchContent(title);
-
-    if (!Array.isArray(results) || results.length === 0) {
-      return [];
-    }
-
-    const ranked = results
-      .map(result => ({
-        ...result,
-        score: titleScore(result.title, title)
-      }))
-      .sort((a, b) => b.score - a.score);
-
-    const match = ranked[0];
-
-    // Avoid returning streams for a clearly different title.
-    if (!match || match.score < 65) {
-      console.log("4KHDHub: no confident title match");
-      return [];
-    }
-
-    const content = await fourKHDHub.loadContent(match.url);
-
-    if (!content || content.type !== type) {
-      return [];
-    }
-
-    let downloadLinks = [];
-
-    if (type === "movie") {
-      downloadLinks = content.downloadLinks || [];
-    } else {
-      if (!Number.isInteger(season) || !Number.isInteger(episode)) {
-        return [];
-      }
-
-      const selectedEpisode = (content.episodes || []).find(item =>
-        item.season === season && item.episode === episode
-      );
-
-      if (!selectedEpisode) {
-        return [];
-      }
-
-      downloadLinks = selectedEpisode.downloadLinks || [];
-    }
-
-    if (!downloadLinks.length) {
-      return [];
-    }
-
-    const links = await fourKHDHub.extractStreamingLinks(downloadLinks);
-
-    if (!Array.isArray(links)) {
-      return [];
-    }
-
-    return links
-      .filter(link =>
-        link &&
-        typeof link.url === "string" &&
-        /^https?:\/\//i.test(link.url)
-      )
-      .map(link => ({
-        name: "4KHDHub",
-        title: `4KHDHub | ${link.name || "Direct link"}${link.quality ? ` | ${link.quality}p` : ""}`,
-        url: link.url
-      }));
-  } catch (error) {
-    console.error("4KHDHub provider failed:", error.message);
+function withTimeout(label, task, milliseconds = 28000) {
+  return Promise.race([
+    Promise.resolve().then(task),
+    new Promise(resolve => setTimeout(() => {
+      console.warn(`[${label}] Timed out after ${milliseconds}ms`);
+      resolve([]);
+    }, milliseconds))
+  ]).catch(error => {
+    console.error(`[${label}] Provider error:`, error && error.message ? error.message : error);
     return [];
-  }
+  }).then(value => Array.isArray(value) ? value : []);
 }
 
-builder.defineStreamHandler(async ({ type, id }) => {
+// ShowBox's upstream implementation reads request settings from a global.
+// Serialize ShowBox calls so two users' cookie settings cannot overwrite one another.
+let showboxQueue = Promise.resolve();
+
+function getShowboxStreams(tmdbId, sourceType, season, episode, config) {
+  const run = async () => {
+    const previousConfig = global.currentRequestConfig;
+    const previousRegion = global.currentRequestRegionPreference;
+    const cookies = String(config.showboxCookies || "")
+      .split(/[\r\n,;]+/)
+      .map(value => value.trim())
+      .filter(Boolean);
+    const region = String(config.showboxRegion || "USA7").trim() || "USA7";
+
+    global.currentRequestConfig = { cookies };
+    global.currentRequestRegionPreference = region;
+
+    try {
+      return await showbox.getStreamsFromTmdbId(
+        sourceType,
+        String(tmdbId),
+        season,
+        episode,
+        region,
+        cookies,
+        null
+      );
+    } finally {
+      global.currentRequestConfig = previousConfig;
+      global.currentRequestRegionPreference = previousRegion;
+    }
+  };
+
+  const result = showboxQueue.then(run, run);
+  showboxQueue = result.then(() => undefined, () => undefined);
+  return result;
+}
+
+builder.defineStreamHandler(async ({ type, id, config = {} }) => {
   try {
-    const parts = id.split(":");
+    const parts = String(id || "").split(":");
     const imdbId = parts[0];
 
     if (!/^tt\d+$/.test(imdbId)) {
@@ -170,46 +143,72 @@ builder.defineStreamHandler(async ({ type, id }) => {
     }
 
     const tmdbId = await imdbToTmdb(imdbId, type);
-
-    if (!tmdbId) {
-      return { streams: [] };
-    }
+    if (!tmdbId) return { streams: [] };
 
     const season = parts[1] ? Number(parts[1]) : undefined;
     const episode = parts[2] ? Number(parts[2]) : undefined;
+    const sourceType = type === "series" ? "tv" : "movie";
+    const needsEpisode = sourceType === "tv";
 
-    const results = await Promise.allSettled([
-      provider.getStreams(String(tmdbId), type, season, episode),
-      playimdb.getStreams(String(tmdbId), type, season, episode),
-      (async () => {
-        const title = await getTmdbTitle(tmdbId, type);
-        if (!title) return [];
+    if (needsEpisode && (!Number.isInteger(season) || !Number.isInteger(episode))) {
+      return { streams: [] };
+    }
 
-        // Keep slow extraction from blocking the response indefinitely.
-        return Promise.race([
-          get4KHDHubStreams(title, type, season, episode),
-          new Promise(resolve =>
-            setTimeout(() => resolve([]), 12000)
-          )
-        ]);
-      })()
-    ]);
+    const metadataPromise = getTmdbMetadata(tmdbId, type).catch(error => {
+      console.error("[TMDB] Metadata lookup failed:", error.message);
+      return { title: "", year: null };
+    });
 
+    // Keep the original PlayIMDb call and original Stremio media type unchanged.
+    const tasks = [
+      isEnabled(config, "enableShowbox")
+        ? withTimeout("ShowBox", () => getShowboxStreams(tmdbId, sourceType, season, episode, config), 35000)
+        : Promise.resolve([]),
+
+      isEnabled(config, "enable4KHDHub")
+        ? withTimeout("4KHDHub", () => fourKHDHub.getStreams(String(tmdbId), sourceType, season, episode))
+        : Promise.resolve([]),
+
+      isEnabled(config, "enableHDHub4u")
+        ? withTimeout("HDHub4u", async () => {
+            const metadata = await metadataPromise;
+            if (!metadata.title) return [];
+            return hdhub4u.getHDHub4uStreams(
+              String(tmdbId),
+              sourceType,
+              metadata.title,
+              metadata.year,
+              season,
+              episode
+            );
+          })
+        : Promise.resolve([]),
+
+      isEnabled(config, "enablePlayIMDb")
+        ? withTimeout("PlayIMDb", () => playimdb.getStreams(String(tmdbId), type, season, episode), 35000)
+        : Promise.resolve([]),
+
+      isEnabled(config, "enableCinejoy")
+        ? withTimeout("Cinejoy", () => cinejoy.getCinejoyStreams(String(tmdbId), sourceType, season, episode))
+        : Promise.resolve([]),
+
+      isEnabled(config, "enableVAplayer")
+        ? withTimeout("VAplayer", () => vaplayer.getVAplayerStreams(String(tmdbId), sourceType, season, episode))
+        : Promise.resolve([])
+    ];
+
+    const results = await Promise.allSettled(tasks);
     const streams = results.flatMap((result, index) => {
       if (result.status !== "fulfilled" || !Array.isArray(result.value)) {
-        console.error(
-          `Provider ${index + 1} failed:`,
-          result.status === "rejected" ? result.reason : "Invalid response"
-        );
+        console.error(`Provider ${index + 1} failed:`, result.status === "rejected" ? result.reason : "Invalid response");
         return [];
       }
-
-      return result.value;
+      return result.value.filter(stream => stream && typeof stream.url === "string" && /^https?:\/\//i.test(stream.url));
     });
 
     return { streams };
   } catch (error) {
-    console.error("Stream handler error:", error.message);
+    console.error("Stream handler error:", error && error.message ? error.message : error);
     return { streams: [] };
   }
 });
@@ -218,6 +217,10 @@ const app = express();
 app.use(getRouter(builder.getInterface()));
 
 const port = Number(process.env.PORT) || 7000;
-app.listen(port, "0.0.0.0", () => {
-  console.log(`4KHDHub Nick listening on ${port}`);
-});
+if (require.main === module) {
+  app.listen(port, "0.0.0.0", () => {
+    console.log(`4KHDHub Nick listening on ${port}`);
+  });
+}
+
+module.exports = app;
