@@ -1,10 +1,72 @@
-
 {
   "id": "com.nick1234.4khdhub",
-  "version": "1.0.0",
+  "version": "2.0.0",
   "name": "4KHDHub Nick",
-  "description": "Movie and series streaming add-on",
-  "resources": ["stream"],
-  "types": ["movie", "series"],
-  "idPrefixes": ["tt"]
+  "description": "Independent movie and series providers",
+  "resources": [
+    "stream"
+  ],
+  "types": [
+    "movie",
+    "series"
+  ],
+  "catalogs": [],
+  "idPrefixes": [
+    "tt"
+  ],
+  "config": [
+    {
+      "key": "enableShowbox",
+      "type": "checkbox",
+      "title": "Enable ShowBox",
+      "default": true
+    },
+    {
+      "key": "enable4KHDHub",
+      "type": "checkbox",
+      "title": "Enable 4KHDHub",
+      "default": true
+    },
+    {
+      "key": "enableHDHub4u",
+      "type": "checkbox",
+      "title": "Enable HDHub4u",
+      "default": true
+    },
+    {
+      "key": "enablePlayIMDb",
+      "type": "checkbox",
+      "title": "Enable PlayIMDb",
+      "default": true
+    },
+    {
+      "key": "enableCinejoy",
+      "type": "checkbox",
+      "title": "Enable Cinejoy",
+      "default": true
+    },
+    {
+      "key": "enableVAplayer",
+      "type": "checkbox",
+      "title": "Enable VAplayer",
+      "default": true
+    },
+    {
+      "key": "showboxCookies",
+      "type": "text",
+      "title": "ShowBox cookies (one per line)",
+      "default": ""
+    },
+    {
+      "key": "showboxRegion",
+      "type": "text",
+      "title": "ShowBox region (for example USA7)",
+      "default": "USA7"
+    }
+  ],
+  "behaviorHints": {
+    "configurable": true,
+    "adult": false,
+    "p2pNotSupported": true
+  }
 }
