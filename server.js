@@ -223,8 +223,19 @@ builder.defineStreamHandler(async ({ type, id, config = {} }) => {
 });
 
 const app = express();
+const addonInterface = builder.getInterface();
+const landingTemplate = require("stremio-addon-sdk").landingTemplate;
+const configurePage = landingTemplate(addonInterface.manifest);
 
-app.use(getRouter(builder.getInterface()));
+// getRouter serves the Stremio manifest and stream endpoints. It does NOT
+// serve the browser landing/configuration page; serveHTTP normally adds these.
+app.get("/", (_req, res) => res.redirect("/configure"));
+app.get("/configure", (_req, res) => {
+  res.setHeader("Content-Type", "text/html; charset=utf-8");
+  res.end(configurePage);
+});
+
+app.use(getRouter(addonInterface));
 
 const port = Number(process.env.PORT) || 7000;
 if (require.main === module) {
