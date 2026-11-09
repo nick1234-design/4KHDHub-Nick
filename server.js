@@ -14,12 +14,12 @@ const vaplayer = require("./providers/vaplayer");
 const TMDB_API_KEY = process.env.TMDB_API_KEY;
 
 const addonConfig = [
-  { key: "enableShowbox", type: "checkbox", title: "Enable ShowBox", default: true },
-  { key: "enable4KHDHub", type: "checkbox", title: "Enable 4KHDHub", default: true },
-  { key: "enableHDHub4u", type: "checkbox", title: "Enable HDHub4u", default: true },
-  { key: "enablePlayIMDb", type: "checkbox", title: "Enable PlayIMDb", default: true },
-  { key: "enableCinejoy", type: "checkbox", title: "Enable Cinejoy", default: true },
-  { key: "enableVAplayer", type: "checkbox", title: "Enable VAplayer", default: true },
+  { key: "enableShowbox", type: "checkbox", title: "Enable ShowBox", default: "checked" },
+  { key: "enable4KHDHub", type: "checkbox", title: "Enable 4KHDHub", default: "checked" },
+  { key: "enableHDHub4u", type: "checkbox", title: "Enable HDHub4u", default: "checked" },
+  { key: "enablePlayIMDb", type: "checkbox", title: "Enable PlayIMDb", default: "checked" },
+  { key: "enableCinejoy", type: "checkbox", title: "Enable Cinejoy", default: "checked" },
+  { key: "enableVAplayer", type: "checkbox", title: "Enable VAplayer", default: "checked" },
   { key: "showboxCookies", type: "text", title: "ShowBox cookies (one per line)", default: "" },
   { key: "showboxRegion", type: "text", title: "ShowBox region (for example USA7)", default: "USA7" }
 ];
@@ -78,21 +78,31 @@ async function getTmdbMetadata(tmdbId, type) {
 }
 
 function isEnabled(config, key) {
-  // Missing config means the provider is enabled by default for first-time installs.
-  return config[key] !== false && config[key] !== "false";
+  // No saved config means all providers start enabled. In Stremio checkbox
+  // configs, checked values arrive as "on" and unchecked values are omitted.
+  if (!config || Object.keys(config).length === 0) return true;
+  return config[key] === "on" || config[key] === true || config[key] === "true";
 }
 
 function withTimeout(label, task, milliseconds = 28000) {
-  return Promise.race([
-    Promise.resolve().then(task),
-    new Promise(resolve => setTimeout(() => {
+  return new Promise(resolve => {
+    const timer = setTimeout(() => {
       console.warn(`[${label}] Timed out after ${milliseconds}ms`);
       resolve([]);
-    }, milliseconds))
-  ]).catch(error => {
-    console.error(`[${label}] Provider error:`, error && error.message ? error.message : error);
-    return [];
-  }).then(value => Array.isArray(value) ? value : []);
+    }, milliseconds);
+
+    Promise.resolve()
+      .then(task)
+      .then(value => {
+        clearTimeout(timer);
+        resolve(Array.isArray(value) ? value : []);
+      })
+      .catch(error => {
+        clearTimeout(timer);
+        console.error(`[${label}] Provider error:`, error && error.message ? error.message : error);
+        resolve([]);
+      });
+  });
 }
 
 // ShowBox's upstream implementation reads request settings from a global.
@@ -185,7 +195,7 @@ builder.defineStreamHandler(async ({ type, id, config = {} }) => {
         : Promise.resolve([]),
 
       isEnabled(config, "enablePlayIMDb")
-        ? withTimeout("PlayIMDb", () => playimdb.getStreams(String(tmdbId), type, season, episode), 35000)
+        ? Promise.resolve().then(() => playimdb.getStreams(String(tmdbId), type, season, episode))
         : Promise.resolve([]),
 
       isEnabled(config, "enableCinejoy")
@@ -203,7 +213,7 @@ builder.defineStreamHandler(async ({ type, id, config = {} }) => {
         console.error(`Provider ${index + 1} failed:`, result.status === "rejected" ? result.reason : "Invalid response");
         return [];
       }
-      return result.value.filter(stream => stream && typeof stream.url === "string" && /^https?:\/\//i.test(stream.url));
+      return result.value;
     });
 
     return { streams };
