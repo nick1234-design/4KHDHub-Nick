@@ -1,23 +1,10 @@
+
 {
   "id": "com.nick1234.4khdhub",
-  "version": "2.0.0",
+  "version": "1.0.0",
   "name": "4KHDHub Nick",
-  "description": "All-in-one movie and series streaming addon",
-  "resources": [
-    "stream"
-  ],
-  "types": [
-    "movie",
-    "series"
-  ],
-  "catalogs": [],
-  "idPrefixes": [
-    "tt",
-    "tmdb"
-  ],
-  "behaviorHints": {
-    "configurable": true,
-    "adult": false,
-    "p2pNotSupported": true
-  }
+  "description": "Movie and series streaming add-on",
+  "resources": ["stream"],
+  "types": ["movie", "series"],
+  "idPrefixes": ["tt"]
 }

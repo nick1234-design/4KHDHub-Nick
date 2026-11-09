@@ -1,22 +1,17 @@
+
 {
-  "name": "4khdhub-nick-all-in-one",
-  "version": "2.0.0",
-  "description": "4KHDHub Nick all-in-one Stremio addon",
+  "name": "4khdhub-nick-stremio",
+  "version": "1.0.0",
+  "description": "4KHDHub Nick Stremio addon",
   "main": "server.js",
   "scripts": {
     "start": "node server.js"
   },
   "dependencies": {
-    "axios": "^1.9.0",
-    "cheerio": "^1.0.0",
-    "cheerio-without-node-native": "1.0.0-rc.2",
-    "cors": "^2.8.5",
-    "dotenv": "^16.5.0",
-    "express": "^4.21.2",
-    "ioredis": "^5.6.1",
-    "node-fetch": "^2.7.0",
     "stremio-addon-sdk": "^1.6.10",
-    "string-similarity": "^4.0.4"
+    "express": "^4.21.2",
+    "cheerio-without-node-native": "1.0.0-rc.2",
+    "jsdom": "^26.1.0"
   },
   "engines": {
     "node": "24.x"
