@@ -279,7 +279,10 @@ small{color:#aeb0bb}
 })();
 </script></body></html>`;
 
-app.get("/", (_req, res) => res.redirect("/configure"));
+app.get("/", (_req, res) => {
+  res.setHeader("Content-Type", "text/html; charset=utf-8");
+  res.end(configurePage);
+});
 app.get("/configure", (_req, res) => {
   res.setHeader("Content-Type", "text/html; charset=utf-8");
   res.end(configurePage);
