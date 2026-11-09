@@ -212,11 +212,24 @@ builder.defineStreamHandler(async ({ type, id, config = {} }) => {
         console.error(`Provider ${index + 1} failed:`, result.status === "rejected" ? result.reason : "Invalid response");
         return [];
       }
+      if (index === 0) {
+        // Give ShowBox streams an explicit source name and readable details.
+        // Stremio displays a generic "Stream" heading when name is missing.
+        return result.value.map(stream => {
+          const sourceTitle = String(stream.title || "ShowBox").trim();
+          const quality = String(stream.quality || "").trim();
+          const size = String(stream.size || "").trim();
+          const titleParts = [sourceTitle];
+          if (quality && !sourceTitle.toLowerCase().includes(quality.toLowerCase())) titleParts.push(quality);
+          if (size && size.toLowerCase() !== "unknown size" && size !== "0") titleParts.push("Size: " + size);
+          const server = String(stream.provider || "").trim();
+          return { ...stream, name: server ? "ShowBox - " + server : "ShowBox", title: titleParts.join("\\n") };
+        });
+      }
       return result.value;
     });
 
-    return { streams };
-  } catch (error) {
+    return { streams };  } catch (error) {
     console.error("Stream handler error:", error && error.message ? error.message : error);
     return { streams: [] };
   }
