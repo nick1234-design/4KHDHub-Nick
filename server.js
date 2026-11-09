@@ -36,8 +36,7 @@ const builder = new addonBuilder({
   config: addonConfig,
   behaviorHints: {
     configurable: true,
-    adult: false,
-    p2pNotSupported: true
+    adult: false
   }
 });
 
