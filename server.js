@@ -224,11 +224,61 @@ builder.defineStreamHandler(async ({ type, id, config = {} }) => {
 
 const app = express();
 const addonInterface = builder.getInterface();
-const landingTemplate = require("stremio-addon-sdk").landingTemplate;
-const configurePage = landingTemplate(addonInterface.manifest);
 
-// getRouter serves the Stremio manifest and stream endpoints. It does NOT
-// serve the browser landing/configuration page; serveHTTP normally adds these.
+// Standalone provider configuration page. Do not call landingTemplate here:
+// it is not exported by the pinned stremio-addon-sdk 1.6.x package and would
+// crash the Vercel function during module initialization.
+const configurePage = `<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>4KHDHub Nick — Configuration</title>
+<style>
+*{box-sizing:border-box}body{margin:0;background:#101116;color:#f5f5f7;font:16px system-ui,sans-serif}
+main{max-width:620px;margin:32px auto;padding:24px}h1{margin:0 0 8px;font-size:28px}
+p{color:#b9bac4;line-height:1.5}.panel{background:#1b1d25;border:1px solid #333642;border-radius:16px;padding:18px;margin:18px 0}
+label{display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid #333642}
+label:last-child{border:0}input[type=checkbox]{width:20px;height:20px;accent-color:#8b7cff}
+input[type=text],textarea{width:100%;margin-top:8px;padding:12px;border-radius:9px;border:1px solid #454957;background:#11131a;color:white}
+button,a.install{display:block;width:100%;text-align:center;background:#8b7cff;color:#11131a;border:0;border-radius:10px;padding:14px;font-weight:700;font-size:16px;text-decoration:none;margin-top:18px}
+small{color:#aeb0bb}
+</style></head>
+<body><main>
+<h1>4KHDHub Nick</h1><p>Choose which independent providers to use in Stremio.</p>
+<section class="panel" id="providers">
+<label><input type="checkbox" id="enableShowbox" checked> ShowBox</label>
+<label><input type="checkbox" id="enable4KHDHub" checked> 4KHDHub</label>
+<label><input type="checkbox" id="enableHDHub4u" checked> HDHub4u</label>
+<label><input type="checkbox" id="enablePlayIMDb" checked> PlayIMDb</label>
+<label><input type="checkbox" id="enableCinejoy" checked> Cinejoy</label>
+<label><input type="checkbox" id="enableVAplayer" checked> VAplayer</label>
+</section>
+<section class="panel">
+<label style="display:block">ShowBox cookies (optional)<textarea id="showboxCookies" rows="3" placeholder="Paste cookies separated by commas"></textarea></label>
+<label style="display:block;border:0">ShowBox region<input type="text" id="showboxRegion" value="USA7"></label>
+</section>
+<button id="install">Install / Update in Stremio</button>
+<p><small>Save your choices by installing this configured add-on. You can return here to change them later.</small></p>
+<p><a id="manifest" style="color:#bcb2ff" href="/manifest.json">View base manifest</a></p>
+</main>
+<script>
+(function(){
+ const keys=['enableShowbox','enable4KHDHub','enableHDHub4u','enablePlayIMDb','enableCinejoy','enableVAplayer'];
+ document.getElementById('install').addEventListener('click',function(){
+   const config={};
+   keys.forEach(function(k){if(document.getElementById(k).checked)config[k]='on';});
+   const cookies=document.getElementById('showboxCookies').value.trim();
+   const region=document.getElementById('showboxRegion').value.trim()||'USA7';
+   if(cookies)config.showboxCookies=cookies;
+   if(region)config.showboxRegion=region;
+   const path='/'+encodeURIComponent(JSON.stringify(config))+'/manifest.json';
+   const url=location.protocol+'//'+location.host+path;
+   document.getElementById('manifest').href=path;
+   location.href='stremio://'+location.host+path;
+ });
+})();
+</script></body></html>`;
+
 app.get("/", (_req, res) => res.redirect("/configure"));
 app.get("/configure", (_req, res) => {
   res.setHeader("Content-Type", "text/html; charset=utf-8");
