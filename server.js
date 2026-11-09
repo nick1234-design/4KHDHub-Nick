@@ -265,16 +265,6 @@ small{color:#aeb0bb}
 <script>
 (function(){
  const keys=['enableShowbox','enable4KHDHub','enableHDHub4u','enablePlayIMDb','enableCinejoy','enableVAplayer'];
- document.getElementById('install').addEventListener('click',function(){
-   const config={};
-   keys.forEach(function(k){if(document.getElementById(k).checked)config[k]='on';});
-   const cookies=document.getElementById('showboxCookies').value.trim();
-   const region=document.getElementById('showboxRegion').value.trim()||'USA7';
-   if(cookies)config.showboxCookies=cookies;
-   if(region)config.showboxRegion=region;
-   const path='/'+encodeURIComponent(JSON.stringify(config))+'/manifest.json';
-   return location.origin+path;
- }
  function currentManifestPath(){
    const config={};
    keys.forEach(function(k){if(document.getElementById(k).checked)config[k]='on';});
@@ -286,17 +276,27 @@ small{color:#aeb0bb}
  }
  document.getElementById('copyManifest').addEventListener('click',async function(){
    const url=location.origin+currentManifestPath();
+   const status=document.getElementById('copyStatus');
+   status.textContent='Preparing your configured manifest URL...';
    try {
-     await navigator.clipboard.writeText(url);
-     document.getElementById('copyStatus').textContent='Configured manifest URL copied!';
-   } catch(e) {
-     const field=document.createElement('input');
-     field.value=url;field.setAttribute('readonly','');
-     field.style.cssText='width:100%;padding:10px;margin-top:10px';
-     document.getElementById('copyStatus').replaceChildren(field);
-     field.select();
-     document.getElementById('copyStatus').append(' Copy the selected URL.');
-   }
+     if(navigator.clipboard && window.isSecureContext) {
+       await navigator.clipboard.writeText(url);
+       status.textContent='Copied! Your configured manifest URL is on the clipboard.';
+       return;
+     }
+   } catch(e) {}
+   const field=document.createElement('textarea');
+   field.value=url;
+   field.setAttribute('readonly','');
+   field.style.cssText='display:block;width:100%;min-height:72px;padding:10px;margin-top:10px;box-sizing:border-box';
+   status.replaceChildren(field);
+   field.focus();
+   field.select();
+   let copied=false;
+   try { copied=document.execCommand('copy'); } catch(e) {}
+   const message=document.createElement('span');
+   message.textContent=copied ? 'Copied! Your configured manifest URL is on the clipboard.' : 'Select the URL above and choose Copy.';
+   status.appendChild(message);
  });
  document.getElementById('install').addEventListener('click',function(){
    const path=currentManifestPath();
