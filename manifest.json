@@ -19,37 +19,37 @@
       "key": "enableShowbox",
       "type": "checkbox",
       "title": "Enable ShowBox",
-      "default": true
+      "default": "checked"
     },
     {
       "key": "enable4KHDHub",
       "type": "checkbox",
       "title": "Enable 4KHDHub",
-      "default": true
+      "default": "checked"
     },
     {
       "key": "enableHDHub4u",
       "type": "checkbox",
       "title": "Enable HDHub4u",
-      "default": true
+      "default": "checked"
     },
     {
       "key": "enablePlayIMDb",
       "type": "checkbox",
       "title": "Enable PlayIMDb",
-      "default": true
+      "default": "checked"
     },
     {
       "key": "enableCinejoy",
       "type": "checkbox",
       "title": "Enable Cinejoy",
-      "default": true
+      "default": "checked"
     },
     {
       "key": "enableVAplayer",
       "type": "checkbox",
       "title": "Enable VAplayer",
-      "default": true
+      "default": "checked"
     },
     {
       "key": "showboxCookies",
