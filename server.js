@@ -20,7 +20,7 @@ const addonConfig = [
   { key: "enablePlayIMDb", type: "checkbox", title: "Enable PlayIMDb", default: "checked" },
   { key: "enableCinejoy", type: "checkbox", title: "Enable Cinejoy", default: "checked" },
   { key: "enableVAplayer", type: "checkbox", title: "Enable VAplayer", default: "checked" },
-  { key: "showboxCookies", type: "text", title: "ShowBox cookies (one per line)", default: "" },
+  { key: "showboxCookies", type: "text", title: "ShowBox cookies (comma-separated)", default: "" },
   { key: "showboxRegion", type: "text", title: "ShowBox region (for example USA7)", default: "USA7" }
 ];
 
