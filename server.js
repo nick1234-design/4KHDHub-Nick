@@ -223,7 +223,7 @@ builder.defineStreamHandler(async ({ type, id, config = {} }) => {
           if (quality && !sourceTitle.toLowerCase().includes(quality.toLowerCase())) titleParts.push(quality);
           if (size && size.toLowerCase() !== "unknown size" && size !== "0") titleParts.push("Size: " + size);
           const server = String(stream.provider || "").trim();
-          return { ...stream, name: server ? "ShowBox - " + server : "ShowBox", title: titleParts.join("\\n") };
+          return { ...stream, name: server ? "ShowBox - " + server : "ShowBox", title: titleParts.join("\n") };
         });
       }
       return result.value;
