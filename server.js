@@ -224,15 +224,6 @@ builder.defineStreamHandler(async ({ type, id, config = {} }) => {
 
 const app = express();
 
-// Friendly landing page so opening the Vercel domain does not show "Cannot GET /".
-app.get("/", (_req, res) => {
-  res.type("html").send(`<!doctype html>
-<html lang="en">
-<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>4KHDHub Nick</title>
-<style>body{font:16px system-ui,sans-serif;max-width:640px;margin:12vh auto;padding:24px;line-height:1.5;color:#202124}a{display:inline-block;margin:8px 12px 8px 0;padding:12px 16px;border:1px solid #bbb;border-radius:10px;color:#1457b8;text-decoration:none}</style></head>
-<body><h1>4KHDHub Nick</h1><p>Your Stremio add-on server is running.</p><a href="/manifest.json">Open Stremio manifest</a><a href="/configure">Configure providers</a></body></html>`);
-});
-
 app.use(getRouter(builder.getInterface()));
 
 const port = Number(process.env.PORT) || 7000;
