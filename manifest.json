@@ -54,7 +54,7 @@
     {
       "key": "showboxCookies",
       "type": "text",
-      "title": "ShowBox cookies (one per line)",
+      "title": "ShowBox cookies (comma-separated)",
       "default": ""
     },
     {
