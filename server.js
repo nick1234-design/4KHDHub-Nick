@@ -257,9 +257,10 @@ small{color:#aeb0bb}
 <label style="display:block">ShowBox cookies (optional)<textarea id="showboxCookies" rows="3" placeholder="Paste cookies separated by commas"></textarea></label>
 <label style="display:block;border:0">ShowBox region<input type="text" id="showboxRegion" value="USA7"></label>
 </section>
+<button id="copyManifest" type="button">Copy Configured Manifest URL</button>
 <button id="install">Install / Update in Stremio</button>
-<p><small>Save your choices by installing this configured add-on. You can return here to change them later.</small></p>
-<p><a id="manifest" style="color:#bcb2ff" href="/manifest.json">View base manifest</a></p>
+<p><small>Copy the URL to save it or paste it into Stremio. Your selected providers and ShowBox settings are included.</small></p>
+<p id="copyStatus" role="status"><a id="manifest" style="color:#bcb2ff" href="/manifest.json">View base manifest</a></p>
 </main>
 <script>
 (function(){
@@ -272,8 +273,33 @@ small{color:#aeb0bb}
    if(cookies)config.showboxCookies=cookies;
    if(region)config.showboxRegion=region;
    const path='/'+encodeURIComponent(JSON.stringify(config))+'/manifest.json';
-   const url=location.protocol+'//'+location.host+path;
-   document.getElementById('manifest').href=path;
+   return location.origin+path;
+ }
+ function currentManifestPath(){
+   const config={};
+   keys.forEach(function(k){if(document.getElementById(k).checked)config[k]='on';});
+   const cookies=document.getElementById('showboxCookies').value.trim();
+   const region=document.getElementById('showboxRegion').value.trim()||'USA7';
+   if(cookies)config.showboxCookies=cookies;
+   if(region)config.showboxRegion=region;
+   return '/'+encodeURIComponent(JSON.stringify(config))+'/manifest.json';
+ }
+ document.getElementById('copyManifest').addEventListener('click',async function(){
+   const url=location.origin+currentManifestPath();
+   try {
+     await navigator.clipboard.writeText(url);
+     document.getElementById('copyStatus').textContent='Configured manifest URL copied!';
+   } catch(e) {
+     const field=document.createElement('input');
+     field.value=url;field.setAttribute('readonly','');
+     field.style.cssText='width:100%;padding:10px;margin-top:10px';
+     document.getElementById('copyStatus').replaceChildren(field);
+     field.select();
+     document.getElementById('copyStatus').append(' Copy the selected URL.');
+   }
+ });
+ document.getElementById('install').addEventListener('click',function(){
+   const path=currentManifestPath();
    location.href='stremio://'+location.host+path;
  });
 })();
